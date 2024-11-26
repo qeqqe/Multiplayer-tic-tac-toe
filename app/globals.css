@@ -69,10 +69,14 @@ body {
 }
 
 @layer base {
+  body {
+    @apply bg-black text-white antialiased;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+  }
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
 }
+
+/* Remove all the gradient and other unnecessary styles */
