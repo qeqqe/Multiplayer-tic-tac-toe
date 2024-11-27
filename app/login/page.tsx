@@ -5,6 +5,36 @@ import { useState } from "react";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState(""); // Change this to username
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await fetch("http://localhost:3001/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email, password }), // Use email field as username
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      localStorage.setItem("token", data.token);
+      window.location.href = "/dashboard"; // Change redirect to dashboard
+    } catch (err: any) {
+      setError(err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
@@ -17,12 +47,20 @@ export default function LoginPage() {
           Welcome Back
         </h1>
 
-        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
           <div>
             <input
-              type="email"
-              placeholder="Email"
+              type="text" // Change type from email to text
+              placeholder="Username" // Change placeholder from Email to Username
               className="w-full p-3 bg-zinc-800/50 rounded-lg border border-zinc-700 text-white focus:outline-none focus:border-blue-500 transition-colors"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div>
@@ -30,15 +68,20 @@ export default function LoginPage() {
               type="password"
               placeholder="Password"
               className="w-full p-3 bg-zinc-800/50 rounded-lg border border-zinc-700 text-white focus:outline-none focus:border-blue-500 transition-colors"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           <button
+            type="submit"
             className="w-full p-3 bg-white text-black rounded-lg font-medium hover:bg-zinc-200 transition-colors"
             onClick={() => setLoading(true)}
           >
             {loading ? "Loading..." : "Login"}
           </button>
         </form>
+
+        {error && <p className="mt-4 text-red-500 text-center">{error}</p>}
 
         <p className="mt-6 text-center text-zinc-400">
           Don't have an account?{" "}
