@@ -2,12 +2,15 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState(""); // Change this to username
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  const router = useRouter();
 
   const handleSubmit = async () => {
     try {
@@ -17,7 +20,7 @@ export default function LoginPage() {
       const res = await fetch("http://localhost:3001/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: email, password }), // Use email field as username
+        body: JSON.stringify({ username: email, password }),
       });
 
       const data = await res.json();
@@ -27,7 +30,10 @@ export default function LoginPage() {
       }
 
       localStorage.setItem("token", data.token);
-      window.location.href = "/dashboard"; // Change redirect to dashboard
+      // Force a small delay to ensure token is saved
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 100);
     } catch (err: any) {
       setError(err.message);
       console.error(err);
