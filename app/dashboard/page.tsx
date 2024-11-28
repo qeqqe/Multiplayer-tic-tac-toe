@@ -10,10 +10,34 @@ export default function DashboardPage() {
   const [showModal, setShowModal] = useState(false);
   const [roomCode, setRoomCode] = useState("");
   const [error, setError] = useState("");
+  const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 });
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/login");
+    }
+
+    // Fetch user stats
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch("http://localhost:3001/user/stats", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch stats");
+
+        const data = await res.json();
+        setStats(data.stats);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+
+    if (user) {
+      fetchStats();
     }
   }, [user, loading, router]);
 
@@ -143,15 +167,21 @@ export default function DashboardPage() {
           <h2 className="text-xl font-semibold mb-4">Your Stats</h2>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="p-4">
-              <div className="text-2xl font-bold text-blue-400">0</div>
+              <div className="text-2xl font-bold text-blue-400">
+                {stats.wins}
+              </div>
               <div className="text-zinc-400">Wins</div>
             </div>
             <div className="p-4">
-              <div className="text-2xl font-bold text-red-400">0</div>
+              <div className="text-2xl font-bold text-red-400">
+                {stats.losses}
+              </div>
               <div className="text-zinc-400">Losses</div>
             </div>
             <div className="p-4">
-              <div className="text-2xl font-bold text-purple-400">0</div>
+              <div className="text-2xl font-bold text-purple-400">
+                {stats.draws}
+              </div>
               <div className="text-zinc-400">Draws</div>
             </div>
           </div>
