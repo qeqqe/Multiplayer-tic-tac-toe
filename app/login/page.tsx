@@ -1,18 +1,26 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
+  const { login, user } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = async () => {
+  useEffect(() => {
+    if (user) {
+      router.replace("/dashboard");
+    }
+  }, [user, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       setLoading(true);
       setError("");
@@ -29,11 +37,8 @@ export default function LoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      localStorage.setItem("token", data.token);
-      // Force a small delay to ensure token is saved
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 100);
+      login(data.token, data.user);
+      router.replace("/dashboard");
     } catch (err: any) {
       setError(err.message);
       console.error(err);
@@ -57,7 +62,7 @@ export default function LoginPage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            handleSubmit();
+            handleSubmit(e);
           }}
         >
           <div>

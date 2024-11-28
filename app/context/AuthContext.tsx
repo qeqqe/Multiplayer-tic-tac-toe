@@ -5,12 +5,16 @@ interface AuthContextType {
   user: any;
   loading: boolean;
   error: string | null;
+  logout: () => void;
+  login: (token: string, userData: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   error: null,
+  logout: () => {},
+  login: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -18,49 +22,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        let token;
-        if (typeof window !== "undefined") {
-          token = localStorage.getItem("token");
-        }
+  const login = (token: string, userData: any) => {
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+  };
 
-        if (!token) {
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+  };
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const storedUser = localStorage.getItem("user");
+
+        if (!token || !storedUser) {
           setLoading(false);
           return;
         }
 
+        // Verify token with server
         const res = await fetch("http://localhost:3001/user", {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
           },
         });
 
-        if (!res.ok) {
-          throw new Error("Failed to fetch user");
-        }
+        if (!res.ok) throw new Error("Invalid token");
 
-        const data = await res.json();
-        console.log("User data:", data);
-        setUser(data.user);
-      } catch (err: any) {
-        console.error("Auth error:", err);
-        setError(err.message);
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("token");
-        }
+        const { user: userData } = await res.json();
+        setUser(userData);
+      } catch (err) {
+        logout();
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUser();
+    initializeAuth();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error }}>
+    <AuthContext.Provider value={{ user, loading, error, logout, login }}>
       {children}
     </AuthContext.Provider>
   );

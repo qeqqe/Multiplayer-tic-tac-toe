@@ -5,21 +5,44 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 
 export default function DashboardPage() {
-  const { user, loading, error } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.replace("/login");
     }
-  }, [loading, user, router]);
+  }, [user, loading, router]);
+
+  const handleCreateRoom = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:3001/create-room", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to create room");
+      }
+
+      const data = await res.json();
+      router.push(`/game/${data.code}`);
+    } catch (error) {
+      console.error("Error creating room:", error);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Loading...</div>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   if (!user) return null;
@@ -36,6 +59,12 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold">3T</h1>
           <div className="flex items-center space-x-4">
             <span className="text-zinc-400">{user.username}</span>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors"
+            >
+              Logout
+            </button>
             <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden">
               <img
                 src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.username}`}
@@ -71,7 +100,10 @@ export default function DashboardPage() {
             <p className="text-zinc-400 mb-4">
               Start a private game with a friend
             </p>
-            <button className="w-full p-3 bg-zinc-700 text-white rounded-lg font-medium hover:bg-zinc-600 transition-colors">
+            <button
+              onClick={handleCreateRoom}
+              className="w-full p-3 bg-zinc-700 text-white rounded-lg font-medium hover:bg-zinc-600 transition-colors"
+            >
               Create Room
             </button>
           </div>

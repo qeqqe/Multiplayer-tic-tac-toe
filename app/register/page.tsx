@@ -45,8 +45,11 @@ export default function RegisterPage() {
         throw new Error(loginData.error || "Auto-login failed");
       }
 
+      // Store both token and user data
       localStorage.setItem("token", loginData.token);
-      router.push("/login");
+      localStorage.setItem("user", JSON.stringify(loginData.user));
+
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message);
     } finally {
