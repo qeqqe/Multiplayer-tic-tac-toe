@@ -17,6 +17,9 @@ interface GameState {
     host: Player | null;
     guest: Player | null;
   };
+  winner?: string | null;
+  isDraw?: boolean;
+  disconnected?: boolean;
 }
 
 let socket: Socket | null = null;
@@ -36,7 +39,6 @@ export default function GamePage() {
   });
 
   useEffect(() => {
-    // Verify room exists and get initial state
     const fetchRoom = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -53,6 +55,7 @@ export default function GamePage() {
         setGameState((prev) => ({
           ...prev,
           status: data.room.status,
+          board: data.room.board || Array(9).fill(null), // Ensure board is set
           players: {
             host: data.room.host,
             guest: data.room.guest,
@@ -66,7 +69,6 @@ export default function GamePage() {
 
     fetchRoom();
 
-    // Setup socket connection
     if (!socket) {
       socket = io("http://localhost:3001", {
         auth: {
@@ -75,17 +77,27 @@ export default function GamePage() {
         },
       });
 
-      socket.on("gameUpdate", (newState) => {
-        setGameState(newState);
-      });
-
-      socket.on("playerMove", ({ index, player }) => {
-        setGameState((prev) => {
-          const newBoard = [...prev.board];
-          newBoard[index] = player;
-          return { ...prev, board: newBoard };
+      socket.on("connect", () => {
+        socket?.emit("joinRoom", {
+          roomCode: code,
+          token: localStorage.getItem("token"),
         });
       });
+
+      socket.on("error", (error) => {
+        console.error(error);
+        router.push("/dashboard");
+      });
+
+      socket.on("gameUpdate", (newState) => {
+        setGameState((prev) => ({
+          ...prev,
+          ...newState,
+          board: newState.board || Array(9).fill(null), // Ensure board is always an array
+        }));
+      });
+
+      // Remove the playerMove event listener as we're handling moves in gameUpdate
     }
 
     return () => {
@@ -97,24 +109,52 @@ export default function GamePage() {
   }, [code, router]);
 
   const handleCellClick = (index: number) => {
-    if (!socket || gameState.board[index] || gameState.status !== "playing")
+    if (
+      !socket ||
+      !user ||
+      gameState.board[index] ||
+      gameState.status !== "playing" ||
+      gameState.currentPlayer !== user.id
+    ) {
       return;
-    socket.emit("makeMove", { index, roomCode: code });
+    }
+
+    socket.emit("makeMove", {
+      index,
+      roomCode: code,
+      userId: user.id,
+    });
+  };
+
+  const getGameStatus = () => {
+    if (gameState.status === "finished") {
+      if (gameState.disconnected) {
+        return `${gameState.winner} wins by disconnection!`;
+      }
+      if (gameState.isDraw) {
+        return "Game Draw!";
+      }
+      return `${gameState.winner} wins!`;
+    }
+
+    if (gameState.status === "waiting") {
+      return "Waiting for opponent...";
+    }
+
+    // Check if it's the current user's turn
+    const isCurrentUserTurn = gameState.currentPlayer === user?.id;
+    return isCurrentUserTurn ? "Your turn" : "Opponent's turn";
   };
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
       <div className="text-white mb-8">
         <h1 className="text-2xl font-bold text-center">Room Code: {code}</h1>
-        <p className="text-zinc-400 text-center mt-2">
-          {gameState.status === "waiting"
-            ? "Waiting for opponent..."
-            : `Current player: ${gameState.currentPlayer}`}
-        </p>
+        <p className="text-zinc-400 text-center mt-2">{getGameStatus()}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-2 w-72 h-72">
-        {gameState.board.map((cell, index) => (
+        {(gameState.board || Array(9).fill(null)).map((cell, index) => (
           <button
             key={index}
             onClick={() => handleCellClick(index)}
@@ -131,6 +171,15 @@ export default function GamePage() {
           {gameState.players.guest?.username || "Waiting..."}
         </p>
       </div>
+
+      {gameState.status === "finished" && (
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="mt-4 px-6 py-2 bg-zinc-700 text-white rounded-md hover:bg-zinc-600 transition-colors"
+        >
+          Back to Dashboard
+        </button>
+      )}
     </div>
   );
 }

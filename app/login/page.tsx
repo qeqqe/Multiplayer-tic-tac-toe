@@ -67,8 +67,8 @@ export default function LoginPage() {
         >
           <div>
             <input
-              type="text" // Change type from email to text
-              placeholder="Username" // Change placeholder from Email to Username
+              type="text"
+              placeholder="Username"
               className="w-full p-3 bg-zinc-800/50 rounded-lg border border-zinc-700 text-white focus:outline-none focus:border-blue-500 transition-colors"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

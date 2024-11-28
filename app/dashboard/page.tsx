@@ -1,12 +1,15 @@
 "use client";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 export default function DashboardPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+  const [showModal, setShowModal] = useState(false);
+  const [roomCode, setRoomCode] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -33,6 +36,26 @@ export default function DashboardPage() {
       router.push(`/game/${data.code}`);
     } catch (error) {
       console.error("Error creating room:", error);
+    }
+  };
+
+  const handleJoinRoom = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:3001/room/${roomCode}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        setError("Invalid room code");
+        return;
+      }
+
+      router.push(`/game/${roomCode}`);
+    } catch (error) {
+      setError("Failed to join room");
     }
   };
 
@@ -83,14 +106,15 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
-          {/* quick play */}
+          {/* Replace quick play with join room */}
           <div className="bg-zinc-800/50 rounded-lg p-6 border border-zinc-700 hover:border-zinc-600 transition-colors">
-            <h2 className="text-xl font-semibold mb-4">Quick Play</h2>
-            <p className="text-zinc-400 mb-4">
-              Join a random match with another player
-            </p>
-            <button className="w-full p-3 bg-white text-black rounded-lg font-medium hover:bg-zinc-200 transition-colors">
-              Find Match
+            <h2 className="text-xl font-semibold mb-4">Join Room</h2>
+            <p className="text-zinc-400 mb-4">Join a game using a room code</p>
+            <button
+              onClick={() => setShowModal(true)}
+              className="w-full p-3 bg-white text-black rounded-lg font-medium hover:bg-zinc-200 transition-colors"
+            >
+              Join Room
             </button>
           </div>
 
@@ -133,6 +157,42 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Add Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-zinc-800 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Join Room</h2>
+            <input
+              type="text"
+              value={roomCode}
+              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+              placeholder="Enter room code"
+              className="w-full p-3 bg-zinc-700 rounded-md text-white mb-4"
+              maxLength={6}
+            />
+            {error && <p className="text-red-400 mb-4 text-sm">{error}</p>}
+            <div className="flex space-x-3">
+              <button
+                onClick={handleJoinRoom}
+                className="flex-1 p-3 bg-white text-black rounded-lg font-medium hover:bg-zinc-200 transition-colors"
+              >
+                Join
+              </button>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  setError("");
+                  setRoomCode("");
+                }}
+                className="flex-1 p-3 bg-zinc-700 text-white rounded-lg font-medium hover:bg-zinc-600 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
