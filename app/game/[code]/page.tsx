@@ -14,6 +14,8 @@ interface GameState {
     host: { id: string; name: string } | null;
     guest: { id: string; name: string } | null;
   };
+  currentPlayer?: string; // Add this new property
+  gameResult: "win" | "draw" | null;
 }
 
 export default function Game() {
@@ -28,6 +30,7 @@ export default function Game() {
     winner: null,
     isDraw: false,
     players: { host: null, guest: null },
+    gameResult: null,
   });
 
   useEffect(() => {
@@ -69,23 +72,30 @@ export default function Game() {
   };
 
   const getStatus = () => {
+    // check if the game is over first
     if (gameState.status === "finished") {
+      // someone won, let's find out who
       if (gameState.winner) {
-        return gameState.winner === user?.id
-          ? "You won! 🎉"
-          : "Opponent won! 😢";
+        // get the winner's name
+        const winnerName =
+          gameState.winner === gameState.players.host?.id
+            ? gameState.players.host.name
+            : gameState.players.guest?.name;
+        return `${winnerName} Won! 🎉`;
       }
-      return "Draw game! 🤝";
+      // no winner means it's a draw
+      return "Game is a Draw! 🤝";
     }
-    if (gameState.status === "waiting") return "Waiting for opponent...";
 
-    const isHost = gameState.players.host?.id === user?.id;
-    const isGuest = gameState.players.guest?.id === user?.id;
-
-    if ((isHost && gameState.xIsNext) || (isGuest && !gameState.xIsNext)) {
-      return "Your turn!";
+    // show waiting message or whose turn it is
+    if (gameState.status === "waiting") {
+      return "Waiting for opponent...";
     }
-    return "Opponent's turn";
+
+    const currentPlayer = gameState.xIsNext
+      ? gameState.players.host?.name
+      : gameState.players.guest?.name;
+    return `${currentPlayer}'s turn`;
   };
 
   const getPlayerLabel = (playerId: string | undefined) => {
@@ -102,16 +112,16 @@ export default function Game() {
           <div
             className={`text-blue-400 ${gameState.xIsNext ? "font-bold" : ""}`}
           >
-            X: {getPlayerLabel(gameState.players.host?.id || "")}
+            X: Host
           </div>
           <div>vs</div>
           <div
             className={`text-red-400 ${!gameState.xIsNext ? "font-bold" : ""}`}
           >
-            O:{" "}
-            {gameState.players.guest
+            O: Guest
+            {/* {gameState.players.guest
               ? getPlayerLabel(gameState.players.guest.id)
-              : "Waiting..."}
+              : "Waiting..."} */}
           </div>
         </div>
         <p className="text-zinc-400 text-center mt-2">{getStatus()}</p>
